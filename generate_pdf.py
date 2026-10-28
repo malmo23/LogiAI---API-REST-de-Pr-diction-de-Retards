@@ -257,7 +257,8 @@ def build_pdf(filename="COMPTE_RENDU.pdf"):
     story.append(Paragraph("8. Rendu Git", h2_style))
     story.append(Paragraph(
         "• <b>Dépôt GitHub :</b> https://github.com/malmo23/logiai<br/>"
-        "• <b>Branche :</b> <code>tp-api</code> &nbsp;&nbsp;|&nbsp;&nbsp; <b>Pull Request :</b> https://github.com/malmo23/logiai/pull/1",
+        "• <b>Branche :</b> <code>main</code> (et branche de travail <code>tp-api</code>)<br/>"
+        "• <b>Lien du projet :</b> https://github.com/malmo23/logiai",
         body_style
     ))
 

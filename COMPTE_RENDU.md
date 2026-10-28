@@ -113,9 +113,9 @@ def predict(livraison: Livraison):
 
 ---
 
-## 7. Lien de la pull request & Tests
+## 7. Lien du dépôt Git & Tests
 
 - **Dépôt GitHub :** https://github.com/malmo23/logiai  
-- **Branche :** `tp-api` vers `main`  
-- **Lien Pull Request :** https://github.com/malmo23/logiai/pull/1  
+- **Branche :** `main` (et branche `tp-api`)  
+- **Lien du projet :** https://github.com/malmo23/logiai  
 - **Résultat final des tests :** 15 tests sur 15 validés avec succès (`15 passed in 3.62s`)
