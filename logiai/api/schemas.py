@@ -1,26 +1,19 @@
-"""Les fiches techniques (schémas Pydantic) de l'API LogiAI."""
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
 class Livraison(BaseModel):
-    """Une livraison à évaluer : les 7 variables du contrat."""
+    model_config = ConfigDict(extra="forbid")
 
-    model_config = ConfigDict(extra="forbid")  # un champ inconnu est refusé (422)
-
-    # Le premier champ est donné. À VOUS : écrire les 6 autres, avec des bornes réalistes.
-    distance_km: float = Field(ge=1, le=1000, description="Distance du trajet (km)")
-    poids_kg: float = Field(ge=0.1, le=5000, description="Poids du chargement en kg")
-    heure_depart: int = Field(ge=0, le=23, description="Heure de départ (0 à 23)")
-    pluie_mm: float = Field(ge=0, le=100, description="Précipitations en mm")
-    trafic_index: float = Field(ge=0, le=10, description="Indice de trafic (0 = fluide, 10 = saturé)")
-    nb_arrets: int = Field(ge=0, le=30, description="Nombre d'arrêts prévus")
-    type_vehicule: Literal["moto", "fourgon", "camion"] = Field(description="Type de véhicule utilisé")
-
+    distance_km: float = Field(..., ge=1.0, le=1000.0)
+    poids_kg: float = Field(..., ge=1.0, le=5000.0)
+    heure_depart: float = Field(..., ge=0, le=23)
+    pluie_mm: float = Field(..., ge=0.0, le=100.0)
+    trafic_index: float = Field(..., ge=0.0, le=10.0)
+    nb_arrets: int = Field(..., ge=0, le=20)
+    type_vehicule: Literal["camion", "fourgon", "moto", "utilitaire", "velo"] = "camion"
 
 class PredictionOut(BaseModel):
-    probabilite_retard: float = Field(ge=0, le=1, description="Probabilité que la livraison soit en retard")
-    alerte: bool = Field(description="True si la probabilité atteint le seuil")
-    seuil: float = Field(description="Seuil d'alerte utilisé")
-    model_version: str = Field(description="Version du modèle")
+    probabilite_retard: float
+    alerte: bool
+    seuil: float
+    model_version: str
