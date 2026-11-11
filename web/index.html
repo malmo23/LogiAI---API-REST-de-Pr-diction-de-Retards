@@ -59,9 +59,7 @@
 </main>
 
 <script>
-// Si la page est servie sur le port 5500 (Atelier 4 en local), contacter l'API sur 8001.
-// Si la page est servie via Nginx/Docker (Atelier 5), utiliser le chemin relatif /api/v1/predict.
-const API_URL = window.location.port === '5500' ? 'http://localhost:8001/v1/predict' : '/api/v1/predict';
+const API_URL = '/api/v1/predict';
 const formulaire = document.getElementById("formulaire");
 const bouton = document.getElementById("bouton");
 const resultat = document.getElementById("resultat");

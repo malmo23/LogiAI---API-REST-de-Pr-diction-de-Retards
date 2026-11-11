@@ -10,7 +10,9 @@ VALIDE = {
 
 
 def post(client, **changements):
-    return client.post("/v1/predict", json={**VALIDE, **changements})
+    from logiai import config
+    key = getattr(config, "API_KEY", "test-user-key")
+    return client.post("/v1/predict", json={**VALIDE, **changements}, headers={"X-API-Key": key})
 
 
 def test_health_repond_ok():
@@ -68,7 +70,9 @@ def test_vehicule_inconnu_refuse():
 def test_champ_manquant_refuse():
     with TestClient(app) as client:
         body = {k: v for k, v in VALIDE.items() if k != "poids_kg"}
-        assert client.post("/v1/predict", json=body).status_code == 422
+        from logiai import config
+        key = getattr(config, "API_KEY", "test-user-key")
+        assert client.post("/v1/predict", json=body, headers={"X-API-Key": key}).status_code == 422
 
 
 def test_champ_inconnu_refuse():
