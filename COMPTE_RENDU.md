@@ -1,9 +1,18 @@
 # Compte Rendu : Atelier 5 - Conteneuriser et déployer LogiAI avec Docker
 
-**Nom :** Maldani Mostafa  
+**Réalisé par :** Maldani Mostafa  
 **Module :** Développement et déploiement d’applications intelligentes  
 **Professeur :** Pr. Soukaina Gouraguine  
 **Année Universitaire :** 2026 - 2027  
+**Branche Git :** `atelier5`  
+
+---
+
+## 0. Préparation : Vérification de l’environnement et des tests (`pytest`)
+
+Avant de conteneuriser l'application, nous avons vérifié que l'environnement de travail était propre sur la branche `atelier5`, que le fichier `.env` contenait les deux clés secrètes (`LOGIAI_API_KEY` et `LOGIAI_ADMIN_KEY`), et que l'intégralité de la suite de tests automatisés (`pytest -v`) passait au vert (**45 passed**).
+
+![Vérification de l'environnement et des 45 tests pytest dans PowerShell (VS Code)](screenshots/terminal_prep_pytest.png)
 
 ---
 
@@ -67,12 +76,15 @@ EXPOSE 8000
 CMD ["uvicorn", "logiai.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### Commandes exécutées
+### Commandes exécutées (PowerShell - VS Code)
 ```powershell
 docker build -t logiai:1.0 .
 docker run -d --name logiai-api-test -p 8001:8000 --env-file .env logiai:1.0
 curl.exe http://localhost:8001/health
+curl.exe -i -X POST http://localhost:8001/v1/predict -H "Content-Type: application/json" -H "X-API-Key: user-cle-secrete-2026" -d "@livraison.json"
 ```
+
+![Construction de l'image Docker logiai:1.0 et test du conteneur sur le port 8001](screenshots/terminal_activite1_docker.png)
 
 ### Trois expériences pour casser le conteneur
 
@@ -179,40 +191,40 @@ logiai-api   atelier4-api   "uvicorn logiai.api.…"   api       1 minute ago   
 logiai-web   atelier4-web   "/docker-entrypoint.…"   web       1 minute ago    Up 1 minute               0.0.0.0:8080->80/tcp
 ```
 
+![Validation et démarrage de l'architecture multi-conteneurs avec docker compose](screenshots/terminal_compose_ps.png)
+
 ### Codes HTTP observés à l'étape 5 (via Nginx sur le port 8080)
 1. `/api/health` : **`200 OK`** (`{"status":"ok","model_loaded":true,"auth_configured":true}`)
 2. `/api/v1/predict` sans clé : **`401 Unauthorized`** (`{"detail":"Clé API manquante dans l'en-tête X-API-Key."}`)
 3. `/api/v1/predict` avec une fausse clé : **`401 Unauthorized`** (`{"detail":"Clé API invalide."}`)
 4. `/api/v1/predict` avec la bonne clé : **`200 OK`** (`{"probabilite_retard":0.732,"alerte":true,"seuil":0.4,"model_version":"1.0"}`)
 
+![Vérification des 4 cas de test HTTP via le reverse proxy Nginx sur le port 8080](screenshots/terminal_curl_nginx.png)
+
 ### Inspection réseau F12 (Étape 6)
 - **Adresse cible :** `http://localhost:8080/api/v1/predict`
 - **Présence d'une requête préliminaire `OPTIONS` :** **Non**, aucune requête `OPTIONS` n'apparaît.
 - **Pourquoi ?** Parce que la page web et l'API partagent désormais la même origine (`http://localhost:8080`). Les requêtes sont considérées comme *same-origin*, ce qui élimine totalement le mécanisme de preflight CORS.
 
-### Relevé des ressources (`docker stats`)
+![Interface web LogiAI servie par Nginx (http://localhost:8080) et inspection réseau F12](screenshots/web_nginx_f12.png)
+
+### Relevé des ressources (`docker stats`), test de panne et volumes (Étapes 7, 8 et 9)
 ```text
 CONTAINER ID   NAME         CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O     PIDS
 270469cb8dcf   logiai-api   0.16%     138.2MiB / 7.049GiB   1.92%     4.11kB / 2.36kB   0B / 0B       13
 22c9d9876630   logiai-web   0.00%     5.82MiB / 7.049GiB    0.08%     8.53kB / 8.01kB   0B / 8.19kB   5
 ```
 
-### Test de panne et résilience (Étape 8)
-- Commande exécutée : `docker compose stop api`
-- Résultat sur la page web : La requête AJAX échoue car Nginx ne peut plus joindre le conteneur API. Nginx renvoie un code d'erreur **`504 Gateway Time-out`** (ou `502 Bad Gateway`).
-- Affichage sur la page : Message d'erreur utilisateur indiquant que le serveur est indisponible.
-- Relance : `docker compose start api` $\rightarrow$ Le service redevient opérationnel immédiatement.
+![Relevé docker stats, test d'arrêt du conteneur API et vérification des volumes montés](screenshots/terminal_stats_volumes.png)
 
-### Observation des volumes (Étape 9)
-- `docker compose exec api ls /app/models` liste `model.joblib` et `model_info.json`.
-- **Pourquoi un nouveau modèle entraîné sur Windows est-il vu sans rebuild ?**  
-  Parce que le bind mount `./models:/app/models` fait pointer le répertoire du conteneur directement vers le système de fichiers hôte de Windows en temps réel.
-- **Et un changement dans `logiai/` ?**  
-  Le code de `logiai/` n'étant pas monté en volume mais copié à la construction (`COPY`), il est figé dans l'image. Tout changement dans le code nécessite une reconstruction : `docker compose up -d --build`.
+- **Test de panne (Étape 8) :** En exécutant `docker compose stop api`, Nginx ne peut plus joindre le conteneur API et renvoie **`504 Gateway Time-out`** (ou `502 Bad Gateway`). Dès que l'on exécute `docker compose start api`, le service redevient opérationnel immédiatement.
+- **Observation des volumes (Étape 9) :** `docker compose exec api ls -la /app/models` liste `model.joblib` et `model_info.json`. Un nouveau modèle entraîné sur Windows est vu sans rebuild grâce au bind mount `./models:/app/models`, tandis qu'une modification du code dans `logiai/` nécessite `docker compose up -d --build`.
 
 ---
 
-## 5. Questions de compréhension
+## 5. Questions de compréhension & ADR 004
+
+L'ensemble des choix d'architecture (image de base `python:3.11-slim`, séparation en deux conteneurs `api` et `web`, reverse proxy Nginx et montage des volumes) est formalisé dans [`docs/adr/004-docker.md`](docs/adr/004-docker.md).
 
 1. **Pourquoi l'ordre des instructions dans le Dockerfile est-il capital pour le cache ?**  
    Docker met en cache chaque couche de construction. Lorsqu'une instruction change, toutes les suivantes doivent être réexécutées. En plaçant l'installation des dépendances (`requirements.txt` puis `pip install`) avant la copie du code source, Docker ne réinstalle pas les paquets tant que `requirements.txt` ne change pas, réduisant le temps de build de plusieurs minutes à quelques secondes.
@@ -240,7 +252,7 @@ CONTAINER ID   NAME         CPU %     MEM USAGE / LIMIT     MEM %     NET I/O   
    Le navigateur s'exécute sur le système d'exploitation de la machine hôte (Windows). Le nom d'hôte `api` n'est résolu que par le serveur DNS interne de Docker pour les conteneurs connectés au même réseau bridge. L'hôte ne peut pas résoudre `http://api:8000`. De plus, l'URL relative permet de conserver une origine unique.
 
 3. **Pourquoi `depends_on` seul ne suffit-il pas, et que change `service_healthy` ?**  
-   `depends_on` seul vérifie seulement que le conteneur a démarré (`Up`). `service_healthy` force Docker Compose à interroger la route `/health` à intervalles réguliers et à attendre que le conteneur soit déclaré en état `healthy` avant de lancer le conteneur Nginx.
+   `depends_on` seul vérifie seulement le démarrage du processus conteneur (`Up`). `service_healthy` force Docker Compose à interroger la route `/health` à intervalles réguliers et à attendre que le conteneur soit déclaré en état `healthy` avant de lancer le conteneur Nginx.
 
 4. **Qu’est-ce qui reste flou pour vous ?**  
    La gestion des utilisateurs non-root (`USER appuser`) dans les images de production pour restreindre les privilèges de sécurité du conteneur, ainsi que la configuration fine du cache de build multi-étapes (*multi-stage build*).
