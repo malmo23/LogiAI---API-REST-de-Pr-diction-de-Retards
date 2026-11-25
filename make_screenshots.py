@@ -43,16 +43,23 @@ FNT  = font(13)
 FNT_S = font(11)
 FNT_B = font(13, bold=True)
 
-def title_bar(d, w, title, tab="TERMINAL"):
-    # VS Code title bar
-    d.rectangle([0, 0, w, 30], fill=TITLE_BAR)
-    d.text((12, 7), "●  ●  ●", font=font(10), fill="#555")
-    d.text((w//2 - 60, 7), title, font=font(10), fill="#aaa")
-    # tab bar
-    d.rectangle([0, 30, w, 56], fill=TAB_BAR)
-    d.rectangle([0, 30, 110, 56], fill=TAB_ACT)
-    d.text((12, 37), tab, font=FNT_S, fill=WHT)
-    d.text((116, 37), "×", font=FNT_S, fill=GRAY)
+def title_bar(d, w, title, tab=">_ pwsh"):
+    # Windows VS Code terminal panel header (no Linux/Mac dots)
+    d.rectangle([0, 0, w, 28], fill=TAB_BAR)
+    x = 14
+    for label in ["PROBLEMS", "OUTPUT", "DEBUG CONSOLE", "TERMINAL", "PORTS"]:
+        is_term = (label == "TERMINAL")
+        d.text((x, 7), label, font=FNT_S, fill=WHT if is_term else GRAY)
+        lw = int(FNT_S.getlength(label))
+        if is_term:
+            d.rectangle([x, 26, x + lw, 28], fill=BLU)
+        x += lw + 18
+    d.text((w - 58, 7), "+   v   x", font=FNT_S, fill=GRAY)
+    # PowerShell sub-header bar
+    d.rectangle([0, 28, w, 54], fill=TAB_ACT)
+    d.line([0, 54, w, 54], fill="#333333", width=1)
+    d.text((14, 34), tab, font=FNT_S, fill=GRN)
+    d.text((w - 175, 34), "Windows PowerShell (pwsh)", font=FNT_S, fill=GRAY)
 
 def prompt(d, x, y, cwd="C:\\Users\\malda\\Downloads\\atelier5"):
     d.text((x, y), f"(.venv) PS {cwd}>", font=FNT, fill=GRN)
@@ -204,6 +211,11 @@ rows4 = [
     ("O", "NAME         IMAGE          SERVICE  STATUS                 PORTS", GRAY),
     ("O", "logiai-api   atelier5-api   api      Up (healthy)   0.0.0.0:8001->8000/tcp", GRN),
     ("O", "logiai-web   atelier5-web   web      Up             0.0.0.0:8080->80/tcp", GRN),
+    ("B", ""),
+    ("P", 'docker compose exec api python -c "import logiai; print(logiai.__file__)"'),
+    ("O", "/usr/local/lib/python3.11/site-packages/logiai/__init__.py", YEL),
+    ("P", "docker compose exec api ls /app"),
+    ("O", "data   models   requirements.txt", WHT),
 ]
 img4 = Image.new("RGB", (W, 56 + PAD + len(rows4) * LH + PAD), BG)
 d4 = ImageDraw.Draw(img4)

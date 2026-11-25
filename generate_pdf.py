@@ -225,32 +225,22 @@ def build():
         story.append(scaled_image("screenshots/05_curl_nginx.png"))
         story.append(Spacer(1, 4))
 
-    # ── 8. QUESTIONS ────────────────────────────────────────────────────────────
-    story.append(Paragraph("8. Questions de compréhension", h2))
+    # ── 8. QUESTIONS & RÉPONSES CLÉS DU TP ──────────────────────────────────────
+    story.append(Paragraph("8. Réponses clés du TP & ADR 005", h2_style if False else h2))
     questions = [
-        ("Quelle différence entre un dossier Python et un package installable ?",
-         "Un dossier avec __init__.py est importable seulement si Python est lancé depuis le répertoire parent. "
-         "Un package installable (pyproject.toml + pip install) est enregistré dans site-packages et reste "
-         "importable depuis n'importe quel répertoire de n'importe quel projet."),
-        ("À quoi sert [project.scripts] dans pyproject.toml ?",
-         "Il déclare des points d'entrée (entry_points). pip crée un exécutable "
-         "(logiai-predict.exe sous Windows) qui appelle la fonction logiai.cli:main, "
-         "accessible dans le PATH sans avoir à invoquer python manuellement."),
-        ("Pourquoi le mode éditable (-e) est-il pratique en développement ?",
-         "pip install -e . crée un lien symbolique vers le code source. Toute modification du code "
-         "source est immédiatement visible sans réinstaller le package, ce qui accélère le cycle "
-         "édition → test."),
-        ("Pourquoi le Dockerfile installe-t-il le package au lieu de faire COPY logiai/ ?",
-         "En installant via pip install, le conteneur dispose des entry_points et des métadonnées "
-         "dist-info (version, dépendances), exactement comme chez n'importe quel utilisateur. "
-         "Cela valide que le packaging est correct et cohérent entre local et production."),
-        ("Que manque-t-il pour publier sur PyPI ?",
-         "Un compte PyPI, un token d'API, compléter les métadonnées METADATA (description, auteur, "
-         "licence, classifiers), puis : python -m twine upload dist/*."),
+        ("Étape 1 — Constat hors du dossier du projet :",
+         "« Pour utiliser LogiAI, mon collègue doit obligatoirement se placer dans le dossier du projet ou modifier son PYTHONPATH, car le code n'est pas installé dans l'environnement Python. »"),
+        ("Étape 4 — Que répond logiai-predict vs l'API avec pluie_mm = 500 ?",
+         "logiai-predict répond « Probabilité de retard : 73 % (ALERTE) » (aucune validation), tandis que l'API renvoie HTTP 422 Unprocessable Entity car le schéma Pydantic Livraison impose pluie_mm <= 100.0."),
+        ("Étape 5 — Les deux messages du test collègue (%TEMP%\\essai) :",
+         "1) Sans LOGIAI_HOME : FileNotFoundError sur ...\\essai\\models\\model.joblib (normal : le modèle n'est pas dans le wheel). 2) Avec LOGIAI_HOME : « Probabilité de retard : 73 % (ALERTE) »."),
+        ("Étape 6 — Chemin de logiai dans le conteneur Docker :",
+         "docker compose exec api python -c \"import logiai; print(logiai.__file__)\" affiche /usr/local/lib/python3.11/site-packages/logiai/__init__.py, et /app contient uniquement data, models et requirements.txt."),
+        ("ADR 005 — >= dans pyproject.toml vs == dans requirements.txt ; modèle hors wheel :",
+         ">= garde la compatibilité chez les collègues ; == fige l'image Docker. Le modèle reste hors du wheel (LOGIAI_HOME) pour éviter de rebuilder le package à chaque ré-entraînement."),
     ]
-    for i, (q, a) in enumerate(questions, 1):
-        story.append(Paragraph(f"<b>{i}. {q}</b>", bullet))
-        story.append(Paragraph(a, bullet))
+    for q, a in questions:
+        story.append(Paragraph(f"<b>{q}</b> {a}", bullet))
         story.append(Spacer(1, 2))
 
     # ── 9. TICKET DE SORTIE ─────────────────────────────────────────────────────
@@ -258,14 +248,16 @@ def build():
     story.append(tbl(
         ["Question", "Réponse"],
         [
-            ["Différence import logiai depuis /tmp avant et après ?",
-             "Avant : ModuleNotFoundError. Après pip install -e . : importable partout car enregistré dans site-packages."],
-            ["La commande logiai-predict fonctionne-t-elle depuis n'importe où ?",
-             "Oui pour l'import Python. Elle a besoin de LOGIAI_HOME pour trouver models/ et data/."],
-            ["Qu'est-ce qui reste flou ?",
-             "La gestion des dépendances optionnelles extras (fastapi, streamlit) dans le wheel et leur impact sur la taille de l'image Docker."],
+            ["1. Docker et le package : quelle différence ?",
+             "Le package (.whl) distribue le code Python ; Docker empaquette tout l'environnement isolé (OS, Python, dépendances figées, services)."],
+            ["2. pip install -e . ou wheel : développer vs livrer ?",
+             "pip install -e . pour développer (code modifié immédiatement actif) ; wheel (.whl) pour livrer une version figée."],
+            ["3. Qu'est-ce qui n'est pas dans le wheel, et que livrer avec ?",
+             "models/, data/, .env et tests/ sont exclus. Il faut livrer le modèle (models/) et la config (LOGIAI_HOME, .env) à côté."],
+            ["4. Qu'est-ce qui reste flou pour vous ?",
+             "L'utilisation du multi-stage build Docker pour réduire encore la taille de l'image finale avec les extras."],
         ],
-        [170, 360]))
+        [185, 345]))
 
     doc.build(story, canvasmaker=NumberedCanvas)
     print("PDF généré : COMPTE_RENDU.pdf")
