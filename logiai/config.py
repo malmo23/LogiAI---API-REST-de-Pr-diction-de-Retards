@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-ROOT = Path(os.environ.get("LOGIAI_HOME", Path(__file__).resolve().parent.parent))
+ROOT = Path(os.environ.get("LOGIAI_HOME", Path.cwd()))
 
 try:
     from dotenv import load_dotenv
